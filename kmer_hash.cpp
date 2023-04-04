@@ -7,7 +7,7 @@
 #include <set>
 #include <upcxx/upcxx.hpp>
 #include <vector>
-
+#include <cmath>
 #include "hash_map.hpp"
 #include "kmer_t.hpp"
 #include "read_kmers.hpp"
@@ -16,13 +16,6 @@
 
 int main(int argc, char** argv) {
     upcxx::init();
-
-    // TODO: Dear Students,
-    // Please remove this if statement, when you start writing your parallel implementation.
-    if (upcxx::rank_n() > 1) {
-        throw std::runtime_error("Error: parallel implementation not started yet!"
-                                 " (remove this when you start working.)");
-    }
 
     if (argc < 2) {
         BUtil::print("usage: srun -N nodes -n ranks ./kmer_hash kmer_file [verbose|test [prefix]]\n");
@@ -52,13 +45,15 @@ int main(int argc, char** argv) {
     }
 
     size_t n_kmers = line_count(kmer_fname);
+    int nprocs = upcxx::rank_n();
 
     // Load factor of 0.5
-    size_t hash_table_size = n_kmers * (1.0 / 0.5);
-    HashMap hashmap(hash_table_size);
-
+    size_t global_hash_table_size = n_kmers * (1.0 / 0.5);
+    size_t local_hash_table_size = ceil(global_hash_table_size/nprocs);
+    HashMap hashmap(local_hash_table_size);
+    
     if (run_type == "verbose") {
-        BUtil::print("Initializing hash table of size %d for %d kmers.\n", hash_table_size,
+        BUtil::print("Initializing hash table of size %d for %d kmers.\n", global_hash_table_size,
                      n_kmers);
     }
 

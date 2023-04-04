@@ -1,0 +1,4 @@
+/global/homes/a/aayushg/CS-267-HW-3/build/CMakeFiles/kmer_hash_19.dir
+/global/homes/a/aayushg/CS-267-HW-3/build/CMakeFiles/kmer_hash_51.dir
+/global/homes/a/aayushg/CS-267-HW-3/build/CMakeFiles/edit_cache.dir
+/global/homes/a/aayushg/CS-267-HW-3/build/CMakeFiles/rebuild_cache.dir
