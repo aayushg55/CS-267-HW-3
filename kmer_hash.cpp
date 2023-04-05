@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     size_t global_hash_table_size = n_kmers * (1.0 / 0.5);
     size_t local_hash_table_size = ceil(global_hash_table_size/nprocs);
     HashMap hashmap(local_hash_table_size);
-    
+
     if (run_type == "verbose") {
         BUtil::print("Initializing hash table of size %d for %d kmers.\n", global_hash_table_size,
                      n_kmers);
@@ -78,8 +78,10 @@ int main(int argc, char** argv) {
         }
     }
     auto end_insert = std::chrono::high_resolution_clock::now();
-    upcxx::barrier();
-
+    std::cout << "finished insert " << upcxx::rank_me() << "\n";
+    // upcxx::barrier();
+    upcxx::future<> f = upcxx::barrier_async();
+    f.wait();
     double insert_time = std::chrono::duration<double>(end_insert - start).count();
     if (run_type != "test") {
         BUtil::print("Finished inserting in %lf\n", insert_time);
@@ -94,10 +96,14 @@ int main(int argc, char** argv) {
         contig.push_back(start_kmer);
         while (contig.back().forwardExt() != 'F') {
             kmer_pair kmer;
+            
             bool success = hashmap.find(contig.back().next_kmer(), kmer);
             if (!success) {
+                uint64_t slot = contig.back().next_kmer().hash() % hashmap.global_size();
+                std::cout << slot << "\n";
                 throw std::runtime_error("Error: k-mer not found in hashmap.");
             }
+            std::cout << "found \n";
             contig.push_back(kmer);
         }
         contigs.push_back(contig);
