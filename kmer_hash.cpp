@@ -66,9 +66,6 @@ int main(int argc, char** argv) {
     auto start = std::chrono::high_resolution_clock::now();
 
     std::vector<kmer_pair> start_nodes;
-    // printf("starting %d \n",upcxx::rank_me());
-    // std::cout << "starting" << upcxx::rank_me() << "\n";
-    BUtil::print("Rank 0 should print this\n");
 
     for (auto& kmer : kmers) {
         bool success = hashmap.insert(kmer);
@@ -79,22 +76,17 @@ int main(int argc, char** argv) {
 
         if (kmer.backwardExt() == 'F') {
             start_nodes.push_back(kmer);
-            std::cout << "rank " << upcxx::rank_me() << "has contig \n";
         }
     }
-    BUtil::print("Inserted all kmers\n");
+    // BUtil::print("Inserted all kmers\n");
     auto end_insert = std::chrono::high_resolution_clock::now();
-    std::cout << "finished insert " << upcxx::rank_me() << "\n";
     upcxx::barrier();
-    // upcxx::future<> f = upcxx::barrier_async();
-    // f.wait();
+
     double insert_time = std::chrono::duration<double>(end_insert - start).count();
     if (run_type != "test") {
         BUtil::print("Finished inserting in %lf\n", insert_time);
     }
-    BUtil::print("finished hashmap inserting %d \n", upcxx::rank_me());
     upcxx::barrier();
-    // std::cout << "after timer " << upcxx::rank_me() << "\n";
 
     auto start_read = std::chrono::high_resolution_clock::now();
 
@@ -102,7 +94,6 @@ int main(int argc, char** argv) {
     for (const auto& start_kmer : start_nodes) {
         std::list<kmer_pair> contig;
         contig.push_back(start_kmer);
-        std::cout << "started find " << upcxx::rank_me() << "\n";
         while (contig.back().forwardExt() != 'F') {
             kmer_pair kmer;
             
@@ -112,18 +103,14 @@ int main(int argc, char** argv) {
                 std::cout << slot << "\n";
                 throw std::runtime_error("Error: k-mer not found in hashmap.");
             }
-            // std::cout << "found \n";
             contig.push_back(kmer);
         }
         contigs.push_back(contig);
     }
-    std::cout << "finished building " << upcxx::rank_me() << "\n";
-    BUtil::print("finished contig building %d \n",upcxx::rank_me());
 
     auto end_read = std::chrono::high_resolution_clock::now();
     upcxx::barrier();
 
-    // std::cout << "finished barrier " << upcxx::rank_me() << "\n";
     auto end = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double> read = end_read - start_read;
