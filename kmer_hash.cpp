@@ -66,7 +66,6 @@ int main(int argc, char** argv) {
     auto start = std::chrono::high_resolution_clock::now();
 
     std::vector<kmer_pair> start_nodes;
-
     for (auto& kmer : kmers) {
         bool success = hashmap.insert(kmer);
 
@@ -78,7 +77,8 @@ int main(int argc, char** argv) {
             start_nodes.push_back(kmer);
         }
     }
-    // BUtil::print("Inserted all kmers\n");
+    hashmap.flush_writes();
+    
     auto end_insert = std::chrono::high_resolution_clock::now();
     upcxx::barrier();
 
@@ -91,6 +91,8 @@ int main(int argc, char** argv) {
     auto start_read = std::chrono::high_resolution_clock::now();
 
     std::list<std::list<kmer_pair>> contigs;
+
+
     for (const auto& start_kmer : start_nodes) {
         std::list<kmer_pair> contig;
         contig.push_back(start_kmer);

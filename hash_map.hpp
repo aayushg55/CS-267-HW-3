@@ -12,9 +12,11 @@ struct HashMap {
     kmer_pair* data;
     upcxx::atomic_domain<int> ad_int;
 
+    upcxx::future<> fut_all;
+    int batch_size;
+    int curr_count;
     //TODO: MAKE IT LOCAL FOR OPTIMIZATION LATER
 
-    
     std::vector<upcxx::global_ptr<kmer_pair>> shared_data;
     std::vector<upcxx::global_ptr<int>> shared_used;
 
@@ -42,6 +44,8 @@ struct HashMap {
 
     int get_target_rank(const uint64_t &key);
     int get_target_slot(const uint64_t &key);
+
+    void flush_writes(void);
 };
 
 HashMap::HashMap(size_t size) {
@@ -59,6 +63,10 @@ HashMap::HashMap(size_t size) {
     data = data_global.local();
 
     memset(used, 0, size);
+
+    fut_all = upcxx::make_future();
+    batch_size = 0.03*my_size;
+    curr_count = batch_size;
 
     for (int i = 0; i < nprocs; i++){
         shared_data[i] = upcxx::broadcast(data_global, i).wait();
@@ -78,6 +86,9 @@ bool HashMap::insert(const kmer_pair& kmer) {
     //linear probing
     uint64_t probe = 0;
     bool success = false;
+    // uint64_t slot = (hash) % global_size();
+    // int target_rank = get_target_rank(slot);
+    // int target_slot = get_target_slot(slot);
     do {
         uint64_t slot = (hash + probe++) % global_size();
         success = request_slot(slot);
@@ -115,7 +126,13 @@ bool HashMap::slot_used(uint64_t slot) {
 void HashMap::write_slot(uint64_t slot, const kmer_pair& kmer) { 
     int target_rank = get_target_rank(slot);
     int target_slot = get_target_slot(slot);
-    rput(kmer, shared_data[target_rank] + target_slot).wait();
+    upcxx::future<> fut = rput(kmer, shared_data[target_rank] + target_slot);
+    fut_all = upcxx::when_all(fut_all, fut);
+    curr_count -= 1;
+    if (batch_size == 0) {
+        fut_all.wait();
+        curr_count = batch_size;
+    }
 }
 
 kmer_pair HashMap::read_slot(uint64_t slot) { 
@@ -131,5 +148,8 @@ bool HashMap::request_slot(uint64_t slot) {
     return (prev == 0);
 }
 
+void HashMap::flush_writes(void) {
+    fut_all.wait();
+}
 size_t HashMap::size() const noexcept { return my_size; }
 size_t HashMap::global_size() const noexcept { return my_global_size; }
