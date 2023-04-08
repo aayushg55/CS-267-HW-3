@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     int nprocs = upcxx::rank_n();
 
     // Load factor of 0.5
-    size_t global_hash_table_size = n_kmers * (1.0 / 0.5);
+    size_t global_hash_table_size = n_kmers * (1.0 / 0.3);
     size_t local_hash_table_size = ceil(global_hash_table_size/nprocs);
     HashMap hashmap(local_hash_table_size);
 
@@ -66,7 +66,11 @@ int main(int argc, char** argv) {
     auto start = std::chrono::high_resolution_clock::now();
 
     std::vector<kmer_pair> start_nodes;
+    
+    // const uint64_t hash = kmers[0].hash();
+    int i = 0;
     for (auto& kmer : kmers) {
+        // const uint64_t hash = kmer.hash();
         bool success = hashmap.insert(kmer);
 
         if (!success) {
@@ -91,15 +95,49 @@ int main(int argc, char** argv) {
     auto start_read = std::chrono::high_resolution_clock::now();
 
     std::list<std::list<kmer_pair>> contigs;
+    // std::vector<std::list<kmer_pair>> contigs(start_nodes.size());
+    // std::vector<int> indices (start_nodes.size());
 
+    // for (const auto& start_kmer : start_nodes){
+    //     std::list<kmer_pair> contig;
+    //     contig.push_back(start_kmer);
+    // }
+    
+    // upcxx::future<> fut_all_inserts = upcxx::make_future();
+
+    // int num_finished_contings = 0;
+    // while (num_finished_contings != start_nodes.size()){
+    //     for (const auto& contig : contigs){
+    //         if (contig.back().forwardExt() != 'F') {
+    //             upcxx::future<> fut = hashmap.find(contig.back().next_kmer(), kmer).then(
+    //                 // lambda to check the return value
+    //                 [key](const string &val) {
+    //                     kmer_pair kmer;
+    //                     bool success = hashmap.find();
+    //                     if (!success) {
+    //                         uint64_t slot = contig.back().next_kmer().hash() % hashmap.global_size();
+    //                         std::cout << slot << "\n";
+    //                         throw std::runtime_error("Error: k-mer not found in hashmap.");
+    //                     }
+    //                     contig.push_back(kmer);
+    //             });
+
+
+    //         } else {
+    //             num_finished_contings++;
+    //         }
+    //         // contigs.push_back(contig);
+    //     }
+    //     fut_all_inserts.wait();
+    // }        
 
     for (const auto& start_kmer : start_nodes) {
         std::list<kmer_pair> contig;
         contig.push_back(start_kmer);
         while (contig.back().forwardExt() != 'F') {
             kmer_pair kmer;
-            
-            bool success = hashmap.find(contig.back().next_kmer(), kmer);
+            const pkmer_t& next_kmer = contig.back().next_kmer();
+            bool success = hashmap.find(next_kmer, kmer);
             if (!success) {
                 uint64_t slot = contig.back().next_kmer().hash() % hashmap.global_size();
                 std::cout << slot << "\n";
