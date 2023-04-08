@@ -35,13 +35,11 @@ struct HashMap {
     // Helper functions
 
     // Write and read to a logical data slot in the table.
-    // void write_slot(uint64_t slot, const kmer_pair& kmer);
     void write_slot(uint64_t target_rank, uint64_t target_slot, const kmer_pair& kmer);
 
     kmer_pair read_slot(uint64_t target_rank, uint64_t target_slot);
 
     // Request a slot or check if it's already used.
-    // bool request_slot(uint64_t slot);
     bool request_slot(uint64_t target_rank, uint64_t target_slot);
     bool slot_used(uint64_t target_rank, uint64_t target_slot);
 
@@ -149,7 +147,6 @@ void HashMap::write_slot(uint64_t target_rank, uint64_t target_slot, const kmer_
     fut_all = upcxx::when_all(fut_all, fut);
     curr_count -= 1;
     if (batch_size == 0) {
-        // upcxx::progress();
         fut_all.wait();
         curr_count = batch_size;
     }
